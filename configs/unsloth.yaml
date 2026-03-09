@@ -1,0 +1,19 @@
+model:
+  name: liuhaotian/llava-v1.5-7b
+  max_seq_length: 2048
+
+lora:
+  r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  target_modules:
+    - q_proj
+    - v_proj
+
+training:
+  batch_size: 8
+  gradient_accumulation_steps: 4
+  learning_rate: 2e-4
+  epochs: 3
+  logging_steps: 10
+  output_dir: models/unsloth
