@@ -4,95 +4,74 @@ from dotenv import load_dotenv
 
 
 def run(cmd):
-    print("\n========================================")
-    print(f"Running: {cmd}")
-    print("========================================\n")
 
-    result = os.system(cmd)
+    print("\n=======================================")
+    print("Running:", cmd)
+    print("=======================================\n")
 
-    if result != 0:
-        raise RuntimeError(f"Command failed: {cmd}")
+    if os.system(cmd) != 0:
+        raise RuntimeError("Command failed")
 
 
-def load_environment():
-
-    print("Loading environment variables...")
+def load_env():
 
     load_dotenv()
 
-    wandb_key = os.getenv("WANDB_API_KEY")
+    key = os.getenv("WANDB_API_KEY")
 
-    if wandb_key:
-        os.environ["WANDB_API_KEY"] = wandb_key
-        print("WANDB API key loaded")
+    if key:
+        os.environ["WANDB_API_KEY"] = key
+        print("WANDB key loaded")
     else:
         print("Warning: WANDB_API_KEY not found")
 
 
-def compare_results():
+def compare():
 
-    qlora_file = "models/qlora/results.json"
-    unsloth_file = "models/unsloth/results.json"
+    q_file = "models/qlora/benchmark.json"
+    u_file = "models/unsloth/benchmark.json"
 
-    if not os.path.exists(qlora_file) or not os.path.exists(unsloth_file):
-        print("No evaluation results found for comparison")
+    if not os.path.exists(q_file) or not os.path.exists(u_file):
+        print("Benchmark files missing")
         return
 
-    with open(qlora_file) as f:
-        qlora = json.load(f)
+    with open(q_file) as f:
+        q = json.load(f)
 
-    with open(unsloth_file) as f:
-        unsloth = json.load(f)
+    with open(u_file) as f:
+        u = json.load(f)
 
-    print("\n===============================")
-    print(" FINAL COMPARISON REPORT")
-    print("===============================\n")
+    print("\n============================")
+    print("BENCHMARK COMPARISON")
+    print("============================\n")
 
-    for metric in qlora:
-
-        q_val = qlora[metric]
-        u_val = unsloth.get(metric)
-
-        print(f"{metric}")
-        print(f"  QLoRA   : {q_val}")
-        print(f"  Unsloth : {u_val}")
+    for k in q:
+        print(k)
+        print("  QLoRA   :", q[k])
+        print("  Unsloth :", u.get(k))
         print()
-
-    print("Comparison complete.\n")
 
 
 def main():
 
-    load_environment()
+    load_env()
 
-    # Step 1: Download Dataset
-    run("python scripts/download_dataset.py")
+    run("python -m scripts.download_dataset")
+    run("python -m scripts.prepare_dataset")
 
+    print("\nRunning QLoRA experiment...\n")
 
-    # Step 2: Prepare Dataset
-    run("python scripts/prepare_dataset.py")
+    run("python -m scripts.train_qlora")
+    run("python -m scripts.evaluate --model models/qlora")
 
-    
-    # Step 3: Train QLoRA
-    print("\nStarting QLoRA training...\n")
+    print("\nRunning Unsloth experiment...\n")
 
-    run("python scripts/train_qlora.py")
+    run("python -m scripts.train_unsloth")
+    run("python -m scripts.evaluate --model models/unsloth")
 
-    run("python scripts/evaluate.py --model models/qlora")
+    compare()
 
-   
-    # Step 4: Train Unsloth
-    print("\nStarting Unsloth training...\n")
-
-    run("python scripts/train_unsloth.py")
-
-    run("python scripts/evaluate.py --model models/unsloth")
-
-    
-    # Step 5: Compare Results
-    compare_results()
-
-    print("\nPipeline completed successfully.\n")
+    print("\nPipeline finished successfully\n")
 
 
 if __name__ == "__main__":

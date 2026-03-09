@@ -15,6 +15,7 @@ from transformers import (
 from peft import LoraConfig, get_peft_model
 
 from utils.vision_collator import VisionLanguageCollator
+from scripts.benchmark import BenchmarkTracker, save_results
 
 
 CONFIG_PATH = "configs/qlora.yaml"
@@ -48,10 +49,10 @@ def main():
     model_name = config["model"]["name"]
 
     bnb_config = BitsAndBytesConfig(
-        load_in_4bit=config["quantization"]["load_in_4bit"],
+        load_in_4bit=True,
         bnb_4bit_compute_dtype=torch.float16,
-        bnb_4bit_use_double_quant=config["quantization"]["bnb_4bit_use_double_quant"],
-        bnb_4bit_quant_type=config["quantization"]["bnb_4bit_quant_type"]
+        bnb_4bit_use_double_quant=True,
+        bnb_4bit_quant_type="nf4"
     )
 
     tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -94,7 +95,19 @@ def main():
         data_collator=collator
     )
 
+    tracker = BenchmarkTracker()
+    tracker.start()
+
     trainer.train()
+
+    tracker.stop()
+
+    benchmark_results = tracker.results()
+
+    save_results(
+        benchmark_results,
+        "models/qlora/benchmark.json"
+    )
 
     trainer.save_model(config["training"]["output_dir"])
 

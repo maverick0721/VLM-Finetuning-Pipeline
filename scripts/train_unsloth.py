@@ -3,10 +3,10 @@ import yaml
 import wandb
 
 from datasets import Dataset
-
 from unsloth import FastLanguageModel
 
 from utils.vision_collator import VisionLanguageCollator
+from scripts.benchmark import BenchmarkTracker, save_results
 
 
 CONFIG_PATH = "configs/unsloth.yaml"
@@ -65,7 +65,19 @@ def main():
         num_train_epochs=config["training"]["epochs"]
     )
 
+    tracker = BenchmarkTracker()
+    tracker.start()
+
     trainer.train()
+
+    tracker.stop()
+
+    benchmark_results = tracker.results()
+
+    save_results(
+        benchmark_results,
+        "models/unsloth/benchmark.json"
+    )
 
     model.save_pretrained(config["training"]["output_dir"])
 
