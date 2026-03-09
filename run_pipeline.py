@@ -71,27 +71,27 @@ def main():
    
     # Step 1: Download Dataset
     if not args.skip_download:
-        run_command("python scripts/download_dataset.py")
+        run_command("python -m scripts.download_dataset")
 
 
     # Step 2: Prepare Dataset
     if not args.skip_preprocess:
-        run_command("python scripts/prepare_dataset.py")
+        run_command("python -m scripts.prepare_dataset")
 
 
     # Step 3: Training
     if not args.skip_train:
 
         if args.method == "qlora":
-            run_command("python scripts/train_qlora.py")
+            run_command("python -m scripts.train_qlora")
 
         elif args.method == "unsloth":
-            run_command("python scripts/train_unsloth.py")
+            run_command("python -m scripts.train_unsloth")
 
 
     # Step 4: Evaluation
     if not args.skip_eval:
-        run_command("python scripts/evaluate.py")
+        run_command("python -m scripts.evaluate")
 
     print("\nPipeline completed successfully.")
 
