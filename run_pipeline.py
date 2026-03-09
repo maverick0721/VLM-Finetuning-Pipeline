@@ -56,20 +56,38 @@ def main():
 
     load_env()
 
+   
+    # DATASETUP
     run("python -m scripts.download_dataset")
     run("python -m scripts.prepare_dataset")
 
+   
+    # QLoRA
     print("\nRunning QLoRA experiment...\n")
 
     run("python -m scripts.train_qlora")
     run("python -m scripts.evaluate --model models/qlora")
 
+    
+    # Unsloth
     print("\nRunning Unsloth experiment...\n")
 
     run("python -m scripts.train_unsloth")
     run("python -m scripts.evaluate --model models/unsloth")
 
+  
+    # Benchmark comparison
     compare()
+
+   
+    # Generate plots
+    run("python -m scripts.generate_report")
+
+  
+    # Launch demo
+    print("\nLaunching interactive demo...\n")
+
+    run("python -m scripts.demo.py")
 
     print("\nPipeline finished successfully\n")
 

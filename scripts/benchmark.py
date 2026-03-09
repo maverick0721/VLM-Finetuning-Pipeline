@@ -35,7 +35,6 @@ class BenchmarkTracker:
         duration = self.end_time - self.start_time
 
         tokens_per_sec = 0
-
         if duration > 0:
             tokens_per_sec = self.total_tokens / duration
 

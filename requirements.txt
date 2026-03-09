@@ -15,3 +15,5 @@ python-dotenv
 pyyaml
 scikit-learn
 evaluate
+gradio
+matplotlib

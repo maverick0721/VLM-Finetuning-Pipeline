@@ -1,21 +1,33 @@
+import torch
 import gradio as gr
-from PIL import Image
 from transformers import AutoProcessor, AutoModelForCausalLM
 
 
-MODEL_PATH = "models/qlora"
-
-processor = AutoProcessor.from_pretrained(MODEL_PATH)
-
-model = AutoModelForCausalLM.from_pretrained(
-    MODEL_PATH,
-    device_map="auto"
-)
+QLORA_MODEL = "models/qlora"
+UNSLOTH_MODEL = "models/unsloth"
 
 
-def generate_caption(image):
+def load_model(path):
 
-    prompt = "Describe the image."
+    processor = AutoProcessor.from_pretrained(path)
+
+    model = AutoModelForCausalLM.from_pretrained(
+        path,
+        device_map="auto",
+        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32
+    )
+
+    return processor, model
+
+
+print("Loading QLoRA model...")
+qlora_processor, qlora_model = load_model(QLORA_MODEL)
+
+print("Loading Unsloth model...")
+unsloth_processor, unsloth_model = load_model(UNSLOTH_MODEL)
+
+
+def run_model(processor, model, image, prompt):
 
     inputs = processor(
         images=image,
@@ -25,7 +37,7 @@ def generate_caption(image):
 
     output = model.generate(
         **inputs,
-        max_new_tokens=100
+        max_new_tokens=120
     )
 
     result = processor.decode(output[0], skip_special_tokens=True)
@@ -33,11 +45,42 @@ def generate_caption(image):
     return result
 
 
+def compare_models(image, prompt):
+
+    qlora_output = run_model(
+        qlora_processor,
+        qlora_model,
+        image,
+        prompt
+    )
+
+    unsloth_output = run_model(
+        unsloth_processor,
+        unsloth_model,
+        image,
+        prompt
+    )
+
+    return qlora_output, unsloth_output
+
+
 interface = gr.Interface(
-    fn=generate_caption,
-    inputs=gr.Image(type="pil"),
-    outputs="text",
-    title="Vision Language Model Demo"
+    fn=compare_models,
+    inputs=[
+        gr.Image(type="pil", label="Upload Image"),
+        gr.Textbox(
+            value="Describe the image in detail.",
+            label="Prompt"
+        )
+    ],
+    outputs=[
+        gr.Textbox(label="QLoRA Output"),
+        gr.Textbox(label="Unsloth Output")
+    ],
+    title="Vision-Language Model Comparison",
+    description="Compare outputs from QLoRA and Unsloth fine-tuned models."
 )
 
-interface.launch()
+
+if __name__ == "__main__":
+    interface.launch(server_name="0.0.0.0", server_port=7860)
