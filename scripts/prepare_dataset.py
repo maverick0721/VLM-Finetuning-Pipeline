@@ -3,8 +3,11 @@ import json
 from datasets import load_dataset
 from tqdm import tqdm
 
+
 RAW_DIR = "data/raw/images"
 OUTPUT_FILE = "data/processed/train.json"
+
+LIMIT = 100
 
 
 def main():
@@ -16,6 +19,9 @@ def main():
     data = []
 
     for idx, sample in enumerate(tqdm(dataset)):
+
+        if idx >= LIMIT:
+            break
 
         image_path = f"{RAW_DIR}/{idx}.jpg"
 
@@ -37,9 +43,6 @@ def main():
                 }
             ]
         })
-
-        if idx > 5000:
-            break
 
     with open(OUTPUT_FILE, "w") as f:
         json.dump(data, f, indent=2)

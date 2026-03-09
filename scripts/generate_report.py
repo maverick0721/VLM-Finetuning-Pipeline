@@ -47,14 +47,9 @@ def main():
 
     for metric in q:
 
-        plot_metric(
-            metric,
-            q[metric],
-            u.get(metric)
-        )
+        plot_metric(metric, q[metric], u.get(metric))
 
-    print("\nReport generation complete.")
-    print("Check the reports/ folder.")
+    print("Reports generated")
 
 
 if __name__ == "__main__":
