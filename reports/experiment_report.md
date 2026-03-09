@@ -7,7 +7,7 @@
 ## Benchmark Results
 | Metric | QLoRA | Unsloth |
 |------|------|------|
-| training_time_seconds | 29.08 | 115.41 |
+| training_time_seconds | 28.22 | 77.83 |
 | tokens_per_second | 0.0 | 0.0 |
 | peak_vram_gb | 22.8 | 4.67 |
 

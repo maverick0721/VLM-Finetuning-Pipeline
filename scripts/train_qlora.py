@@ -41,7 +41,7 @@ class TokenCounterCallback(TrainerCallback):
         self.tracker = tracker
 
 
-    def on_step_end(self, args, state, control, **kwargs):
+    def on_train_batch_end(self, args, state, control, **kwargs):
 
         inputs = kwargs.get("inputs")
 

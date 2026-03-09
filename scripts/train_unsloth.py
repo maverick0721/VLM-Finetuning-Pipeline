@@ -5,7 +5,7 @@ import torch
 
 from datasets import Dataset
 from unsloth import FastLanguageModel
-from transformers import TrainingArguments, Trainer
+from transformers import TrainingArguments, Trainer, TrainerCallback
 
 from utils.vision_collator import VisionLanguageCollator
 from scripts.benchmark import BenchmarkTracker, save_results
@@ -24,6 +24,23 @@ def load_dataset():
     with open(DATA_PATH) as f:
         data = json.load(f)
     return Dataset.from_list(data)
+
+
+class TokenCounterCallback(TrainerCallback):
+
+    def __init__(self, tracker):
+        self.tracker = tracker
+
+
+    def on_train_batch_end(self, args, state, control, **kwargs):
+
+        inputs = kwargs.get("inputs")
+
+        if inputs and "input_ids" in inputs:
+
+            tokens = inputs["input_ids"].numel()
+
+            self.tracker.add_tokens(tokens)
 
 
 def main():
@@ -78,6 +95,9 @@ def main():
     )
 
     tracker = BenchmarkTracker()
+
+    trainer.add_callback(TokenCounterCallback(tracker))
+
     tracker.start()
 
     trainer.train()
