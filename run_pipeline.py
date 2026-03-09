@@ -1,20 +1,21 @@
 import os
-import argparse
+import json
 from dotenv import load_dotenv
 
 
-def run_command(command):
-    print("\n--------------------------------------------------")
-    print(f"Running: {command}")
-    print("--------------------------------------------------\n")
+def run(cmd):
+    print("\n========================================")
+    print(f"Running: {cmd}")
+    print("========================================\n")
 
-    exit_code = os.system(command)
+    result = os.system(cmd)
 
-    if exit_code != 0:
-        raise RuntimeError(f"Command failed: {command}")
+    if result != 0:
+        raise RuntimeError(f"Command failed: {cmd}")
 
 
-def setup_env():
+def load_environment():
+
     print("Loading environment variables...")
 
     load_dotenv()
@@ -23,77 +24,75 @@ def setup_env():
 
     if wandb_key:
         os.environ["WANDB_API_KEY"] = wandb_key
-        print("WANDB_API_KEY loaded from .env")
+        print("WANDB API key loaded")
     else:
-        print("Warning: WANDB_API_KEY not found in .env")
+        print("Warning: WANDB_API_KEY not found")
+
+
+def compare_results():
+
+    qlora_file = "models/qlora/results.json"
+    unsloth_file = "models/unsloth/results.json"
+
+    if not os.path.exists(qlora_file) or not os.path.exists(unsloth_file):
+        print("No evaluation results found for comparison")
+        return
+
+    with open(qlora_file) as f:
+        qlora = json.load(f)
+
+    with open(unsloth_file) as f:
+        unsloth = json.load(f)
+
+    print("\n===============================")
+    print(" FINAL COMPARISON REPORT")
+    print("===============================\n")
+
+    for metric in qlora:
+
+        q_val = qlora[metric]
+        u_val = unsloth.get(metric)
+
+        print(f"{metric}")
+        print(f"  QLoRA   : {q_val}")
+        print(f"  Unsloth : {u_val}")
+        print()
+
+    print("Comparison complete.\n")
 
 
 def main():
 
-    parser = argparse.ArgumentParser()
+    load_environment()
 
-    parser.add_argument(
-        "--method",
-        type=str,
-        default="qlora",
-        choices=["qlora", "unsloth"],
-        help="Training method"
-    )
-
-    parser.add_argument(
-        "--skip-download",
-        action="store_true",
-        help="Skip dataset download"
-    )
-
-    parser.add_argument(
-        "--skip-preprocess",
-        action="store_true",
-        help="Skip dataset preprocessing"
-    )
-
-    parser.add_argument(
-        "--skip-train",
-        action="store_true",
-        help="Skip training"
-    )
-
-    parser.add_argument(
-        "--skip-eval",
-        action="store_true",
-        help="Skip evaluation"
-    )
-
-    args = parser.parse_args()
-
-    setup_env()
-
-   
     # Step 1: Download Dataset
-    if not args.skip_download:
-        run_command("python -m scripts.download_dataset")
+    run("python scripts/download_dataset.py")
 
 
     # Step 2: Prepare Dataset
-    if not args.skip_preprocess:
-        run_command("python -m scripts.prepare_dataset")
+    run("python scripts/prepare_dataset.py")
 
+    
+    # Step 3: Train QLoRA
+    print("\nStarting QLoRA training...\n")
 
-    # Step 3: Training
-    if not args.skip_train:
+    run("python scripts/train_qlora.py")
 
-        if args.method == "qlora":
-            run_command("python -m scripts.train_qlora")
+    run("python scripts/evaluate.py --model models/qlora")
 
-        elif args.method == "unsloth":
-            run_command("python -m scripts.train_unsloth")
+   
+    # Step 4: Train Unsloth
+    print("\nStarting Unsloth training...\n")
 
+    run("python scripts/train_unsloth.py")
 
-    # Step 4: Evaluation
-    if not args.skip_eval:
-        run_command("python -m scripts.evaluate")
+    run("python scripts/evaluate.py --model models/unsloth")
 
-    print("\nPipeline completed successfully.")
+    
+    # Step 5: Compare Results
+    compare_results()
+
+    print("\nPipeline completed successfully.\n")
 
 
 if __name__ == "__main__":
