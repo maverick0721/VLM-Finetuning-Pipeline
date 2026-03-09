@@ -14,11 +14,13 @@ DATA_PATH = "data/processed/train.json"
 
 
 def load_config():
+
     with open(CONFIG_PATH) as f:
         return yaml.safe_load(f)
 
 
 def load_dataset():
+
     with open(DATA_PATH) as f:
         data = json.load(f)
 
@@ -66,6 +68,7 @@ def main():
     )
 
     tracker = BenchmarkTracker()
+
     tracker.start()
 
     trainer.train()
