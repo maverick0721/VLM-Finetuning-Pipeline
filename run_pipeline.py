@@ -1,6 +1,8 @@
 import os
 import json
 import subprocess
+import gc
+import torch
 from dotenv import load_dotenv
 
 
@@ -21,6 +23,16 @@ def run(cmd):
 
     if result.returncode != 0:
         raise RuntimeError(f"Command failed: {cmd}")
+
+
+def clear_gpu():
+
+    print("\nClearing GPU memory...\n")
+
+    gc.collect()
+
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
 
 def load_env():
@@ -80,6 +92,7 @@ def main():
 
     load_env()
 
+   
     # DATA DOWNLOAD
     print("\nSTEP 1: DATA DOWNLOAD")
 
@@ -88,6 +101,7 @@ def main():
     else:
         print("Dataset already exists")
 
+  
     # DATA PREPARATION
     print("\nSTEP 2: DATA PREPARATION")
 
@@ -96,46 +110,71 @@ def main():
     else:
         print("Processed dataset already exists")
 
-    # QLORA TRAINING & EVALUATION
+   
+    # QLORA TRAINING
     print("\nSTEP 3: QLoRA TRAINING")
 
     if not model_exists(QLORA_MODEL_DIR):
         run("python -m scripts.train_qlora")
-        run("python -m scripts.evaluate --model models/qlora")
     else:
         print("QLoRA model already trained")
 
-    # UNSLOTH TRAINING & EVALUATION
-    print("\nSTEP 4: UNSLOTH TRAINING")
+    clear_gpu()
+
+  
+    # QLORA EVALUATION
+    print("\nSTEP 4: QLoRA EVALUATION")
+
+    run("python -m scripts.evaluate --model models/qlora")
+
+    clear_gpu()
+
+   
+    # UNSLOTH TRAINING
+    print("\nSTEP 5: UNSLOTH TRAINING")
 
     if not model_exists(UNSLOTH_MODEL_DIR):
         run("python -m scripts.train_unsloth")
-        run("python -m scripts.evaluate --model models/unsloth")
     else:
         print("Unsloth model already trained")
 
+    clear_gpu()
+
+
+    # UNSLOTH EVALUATION
+    print("\nSTEP 6: UNSLOTH EVALUATION")
+
+    run("python -m scripts.evaluate --model models/unsloth")
+
+    clear_gpu()
+
+    
     # BENCHMARK COMPARISON
-    print("\nSTEP 5: BENCHMARK COMPARISON")
+    print("\nSTEP 7: BENCHMARK COMPARISON")
 
     compare()
 
-    # REPORT GENERATION
-    print("\nSTEP 6: GENERATE REPORT")
+  
+    # GENERATE REPORT
+    print("\nSTEP 8: GENERATE REPORT")
 
     run("python -m scripts.generate_report")
 
-    # DIAGRAM GENERATION
-    print("\nSTEP 7: GENERATE DIAGRAMS")
+    
+    # GENERATE DIAGRAM
+    print("\nSTEP 9: GENERATE PIPELINE DIAGRAM")
 
-    run("python -m scripts.generate_diagrams")
+    run("python -m scripts.generate_diagram")
 
-    # REPORT+DIAGRAM GENERATION
-    print("\nSTEP 8: GENERATE FULL REPORT PDF")
+
+    # EXPORT PDF REPORT
+    print("\nSTEP 10: EXPORT PDF REPORT")
 
     run("python -m scripts.export_report_pdf")
 
-    # DEMO LAUNCH
-    print("\nSTEP 9: LAUNCH DEMO")
+    
+    # DEMO
+    print("\nSTEP 11: LAUNCH DEMO")
 
     run("python -m scripts.demo")
 

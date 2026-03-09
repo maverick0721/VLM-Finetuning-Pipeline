@@ -92,7 +92,9 @@ def main():
         num_train_epochs=config["training"]["epochs"],
         logging_steps=5,
         save_strategy="epoch",
-        report_to="wandb"
+        report_to="wandb",
+        remove_unused_columns=False,
+        dataloader_drop_last=True
     )
 
     trainer = Trainer(
@@ -122,6 +124,7 @@ def main():
     wandb.log(results)
 
     model.save_pretrained("models/qlora")
+    processor.save_pretrained("models/qlora")
 
     print("QLoRA training complete")
 

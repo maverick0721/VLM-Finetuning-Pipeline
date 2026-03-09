@@ -26,7 +26,7 @@ def main():
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    dataset = load_dataset("conceptual_captions", split="train")
+    dataset = load_dataset("conceptual_captions", split="train[:100]")
 
     print("Downloading dataset images...")
 

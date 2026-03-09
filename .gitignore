@@ -22,5 +22,9 @@ build/
 *.zip
 .env/
 venv/
-
+unsloth_compiled_cache/
 .env
+data/
+models/
+reports/
+wandb/

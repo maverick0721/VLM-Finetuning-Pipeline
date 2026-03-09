@@ -16,15 +16,23 @@ class VisionLanguageCollator:
 
         for sample in batch:
 
-            image = Image.open(sample["image"]).convert("RGB")
+            try:
 
-            prompt = sample["conversation"][0]["value"]
+                image = Image.open(sample["image"]).convert("RGB")
+
+            except Exception:
+                continue
+
+            question = sample["conversation"][0]["value"]
             answer = sample["conversation"][1]["value"]
 
-            full_text = prompt + " " + answer
+            prompt = "<image>\n" + question + "\n" + answer
 
             images.append(image)
-            prompts.append(full_text)
+            prompts.append(prompt)
+
+        if len(images) == 0:
+            return None
 
         inputs = self.processor(
             images=images,

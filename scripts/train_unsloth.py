@@ -1,15 +1,11 @@
 import json
 import yaml
 import wandb
+import torch
 
 from datasets import Dataset
-from transformers import (
-    LlavaForConditionalGeneration,
-    AutoProcessor,
-    TrainingArguments,
-    Trainer,
-    TrainerCallback
-)
+from unsloth import FastLanguageModel
+from transformers import TrainingArguments, Trainer
 
 from utils.vision_collator import VisionLanguageCollator
 from scripts.benchmark import BenchmarkTracker, save_results
@@ -20,34 +16,14 @@ DATA_PATH = "data/processed/train.json"
 
 
 def load_config():
-
     with open(CONFIG_PATH) as f:
         return yaml.safe_load(f)
 
 
 def load_dataset():
-
     with open(DATA_PATH) as f:
         data = json.load(f)
-
     return Dataset.from_list(data)
-
-
-class TokenCounterCallback(TrainerCallback):
-
-    def __init__(self, tracker):
-        self.tracker = tracker
-
-
-    def on_step_end(self, args, state, control, **kwargs):
-
-        inputs = kwargs.get("inputs")
-
-        if inputs and "input_ids" in inputs:
-
-            tokens = inputs["input_ids"].numel()
-
-            self.tracker.add_tokens(tokens)
 
 
 def main():
@@ -64,14 +40,24 @@ def main():
 
     model_name = config["model"]["name"]
 
-    processor = AutoProcessor.from_pretrained(model_name)
+    print("Loading Unsloth optimized model...")
 
-    model = LlavaForConditionalGeneration.from_pretrained(
-        model_name,
+    model, tokenizer = FastLanguageModel.from_pretrained(
+        model_name=model_name,
+        max_seq_length=2048,
+        load_in_4bit=True,
         device_map="auto"
     )
 
-    collator = VisionLanguageCollator(processor)
+    model = FastLanguageModel.get_peft_model(
+        model,
+        r=config["lora"]["r"],
+        target_modules=["q_proj", "v_proj"],
+        lora_alpha=config["lora"]["alpha"],
+        lora_dropout=config["lora"]["dropout"]
+    )
+
+    collator = VisionLanguageCollator(tokenizer)
 
     training_args = TrainingArguments(
         output_dir="models/unsloth",
@@ -79,7 +65,9 @@ def main():
         num_train_epochs=config["training"]["epochs"],
         logging_steps=5,
         save_strategy="epoch",
-        report_to="wandb"
+        report_to="wandb",
+        remove_unused_columns=False,
+        dataloader_drop_last=True
     )
 
     trainer = Trainer(
@@ -90,9 +78,6 @@ def main():
     )
 
     tracker = BenchmarkTracker()
-
-    trainer.add_callback(TokenCounterCallback(tracker))
-
     tracker.start()
 
     trainer.train()
@@ -101,16 +86,17 @@ def main():
 
     results = tracker.results()
 
-    save_results(
-        results,
-        "models/unsloth/benchmark.json"
-    )
+    save_results(results, "models/unsloth/benchmark.json")
 
     wandb.log(results)
 
     model.save_pretrained("models/unsloth")
+    tokenizer.save_pretrained("models/unsloth")
 
     print("Unsloth training complete")
+
+    del model
+    torch.cuda.empty_cache()
 
 
 if __name__ == "__main__":
