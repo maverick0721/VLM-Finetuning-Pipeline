@@ -1,0 +1,17 @@
+torch
+torchvision
+torchaudio
+transformers
+datasets
+accelerate
+peft
+bitsandbytes
+unsloth
+wandb
+pillow
+opencv-python
+tqdm
+python-dotenv
+pyyaml
+scikit-learn
+evaluate
