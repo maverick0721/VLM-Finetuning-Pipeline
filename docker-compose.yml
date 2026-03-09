@@ -1,0 +1,17 @@
+version: "3.8"
+
+services:
+
+  vlm-pipeline:
+
+    build: .
+
+    container_name: vlm_finetuning_pipeline
+
+    volumes:
+      - .:/app
+
+    environment:
+      - WANDB_API_KEY=${WANDB_API_KEY}
+
+    command: python run_pipeline.py

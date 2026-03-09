@@ -1,38 +1,38 @@
 import torch
 from PIL import Image
-from transformers import AutoProcessor
 
 
 class VisionLanguageCollator:
-    def __init__(self, processor_name):
-        self.processor = AutoProcessor.from_pretrained(processor_name)
+
+    def __init__(self, processor):
+
+        self.processor = processor
+
 
     def __call__(self, batch):
+
         images = []
-        texts = []
+        prompts = []
 
         for sample in batch:
+
             image = Image.open(sample["image"]).convert("RGB")
 
-            conversation = sample["conversation"]
+            prompt = sample["conversation"][0]["value"]
+            answer = sample["conversation"][1]["value"]
 
-            prompt = conversation[0]["value"]
-            answer = conversation[1]["value"]
-
-            text = f"USER: {prompt}\nASSISTANT: {answer}"
+            full_text = prompt + " " + answer
 
             images.append(image)
-            texts.append(text)
+            prompts.append(full_text)
 
         inputs = self.processor(
             images=images,
-            text=texts,
+            text=prompts,
             padding=True,
             return_tensors="pt"
         )
 
-        labels = inputs["input_ids"].clone()
-
-        inputs["labels"] = labels
+        inputs["labels"] = inputs["input_ids"].clone()
 
         return inputs

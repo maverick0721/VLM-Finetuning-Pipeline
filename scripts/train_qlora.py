@@ -1,15 +1,13 @@
 import json
 import yaml
-import torch
 import wandb
 
 from datasets import Dataset
 from transformers import (
-    AutoModelForCausalLM,
-    AutoTokenizer,
-    Trainer,
+    LlavaForConditionalGeneration,
+    AutoProcessor,
     TrainingArguments,
-    BitsAndBytesConfig,
+    Trainer,
     TrainerCallback
 )
 
@@ -19,11 +17,12 @@ from utils.vision_collator import VisionLanguageCollator
 from scripts.benchmark import BenchmarkTracker, save_results
 
 
-CONFIG_PATH = "configs/qlora.yaml"
+CONFIG_PATH = "configs/experiment.yaml"
 DATA_PATH = "data/processed/train.json"
 
 
 def load_config():
+
     with open(CONFIG_PATH) as f:
         return yaml.safe_load(f)
 
@@ -41,12 +40,15 @@ class TokenCounterCallback(TrainerCallback):
     def __init__(self, tracker):
         self.tracker = tracker
 
+
     def on_step_end(self, args, state, control, **kwargs):
 
         inputs = kwargs.get("inputs")
 
         if inputs and "input_ids" in inputs:
+
             tokens = inputs["input_ids"].numel()
+
             self.tracker.add_tokens(tokens)
 
 
@@ -55,7 +57,7 @@ def main():
     config = load_config()
 
     wandb.init(
-        project="vlm-finetuning-research",
+        project=config["project"],
         name="qlora-training",
         config=config
     )
@@ -64,43 +66,32 @@ def main():
 
     model_name = config["model"]["name"]
 
-    bnb_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_compute_dtype=torch.float16,
-        bnb_4bit_use_double_quant=True,
-        bnb_4bit_quant_type="nf4"
-    )
+    processor = AutoProcessor.from_pretrained(model_name)
 
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-
-    model = AutoModelForCausalLM.from_pretrained(
+    model = LlavaForConditionalGeneration.from_pretrained(
         model_name,
-        quantization_config=bnb_config,
         device_map="auto"
     )
 
     lora_config = LoraConfig(
         r=config["lora"]["r"],
-        lora_alpha=config["lora"]["lora_alpha"],
-        target_modules=config["lora"]["target_modules"],
-        lora_dropout=config["lora"]["lora_dropout"],
+        lora_alpha=config["lora"]["alpha"],
+        lora_dropout=config["lora"]["dropout"],
+        target_modules=["q_proj", "v_proj"],
         bias="none",
         task_type="CAUSAL_LM"
     )
 
     model = get_peft_model(model, lora_config)
 
-    collator = VisionLanguageCollator(model_name)
+    collator = VisionLanguageCollator(processor)
 
     training_args = TrainingArguments(
-        output_dir=config["training"]["output_dir"],
+        output_dir="models/qlora",
         per_device_train_batch_size=config["training"]["batch_size"],
-        gradient_accumulation_steps=config["training"]["gradient_accumulation_steps"],
-        learning_rate=config["training"]["learning_rate"],
         num_train_epochs=config["training"]["epochs"],
-        logging_steps=config["training"]["logging_steps"],
+        logging_steps=5,
         save_strategy="epoch",
-        fp16=True,
         report_to="wandb"
     )
 
@@ -121,14 +112,18 @@ def main():
 
     tracker.stop()
 
-    benchmark_results = tracker.results()
+    results = tracker.results()
 
     save_results(
-        benchmark_results,
+        results,
         "models/qlora/benchmark.json"
     )
 
-    trainer.save_model(config["training"]["output_dir"])
+    wandb.log(results)
+
+    model.save_pretrained("models/qlora")
+
+    print("QLoRA training complete")
 
 
 if __name__ == "__main__":

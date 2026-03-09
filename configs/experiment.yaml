@@ -1,0 +1,17 @@
+project: vlm-finetuning-research
+
+dataset:
+  size: 100
+
+training:
+  epochs: 1
+  batch_size: 2
+  learning_rate: 2e-4
+
+model:
+  name: llava-hf/llava-1.5-7b-hf
+
+lora:
+  r: 8
+  alpha: 16
+  dropout: 0.05

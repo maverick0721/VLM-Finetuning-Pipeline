@@ -1,0 +1,9 @@
+.git
+__pycache__
+wandb
+models
+reports
+data
+*.pyc
+*.pyo
+*.pyd

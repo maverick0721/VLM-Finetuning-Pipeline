@@ -18,7 +18,7 @@ def download_image(url, path):
             with open(path, "wb") as f:
                 f.write(r.content)
 
-    except:
+    except Exception:
         pass
 
 
@@ -27,6 +27,8 @@ def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
     dataset = load_dataset("conceptual_captions", split="train")
+
+    print("Downloading dataset images...")
 
     for idx, sample in enumerate(tqdm(dataset)):
 

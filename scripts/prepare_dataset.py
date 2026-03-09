@@ -18,6 +18,8 @@ def main():
 
     data = []
 
+    print("Preparing dataset...")
+
     for idx, sample in enumerate(tqdm(dataset)):
 
         if idx >= LIMIT:
@@ -35,7 +37,7 @@ def main():
             "conversation": [
                 {
                     "from": "human",
-                    "value": "Describe the image in detail."
+                    "value": "Describe the image."
                 },
                 {
                     "from": "assistant",
@@ -47,7 +49,7 @@ def main():
     with open(OUTPUT_FILE, "w") as f:
         json.dump(data, f, indent=2)
 
-    print("Dataset prepared:", OUTPUT_FILE)
+    print("Dataset saved to:", OUTPUT_FILE)
 
 
 if __name__ == "__main__":

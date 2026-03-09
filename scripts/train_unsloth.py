@@ -3,13 +3,19 @@ import yaml
 import wandb
 
 from datasets import Dataset
-from unsloth import FastLanguageModel
+from transformers import (
+    LlavaForConditionalGeneration,
+    AutoProcessor,
+    TrainingArguments,
+    Trainer,
+    TrainerCallback
+)
 
 from utils.vision_collator import VisionLanguageCollator
 from scripts.benchmark import BenchmarkTracker, save_results
 
 
-CONFIG_PATH = "configs/unsloth.yaml"
+CONFIG_PATH = "configs/experiment.yaml"
 DATA_PATH = "data/processed/train.json"
 
 
@@ -27,12 +33,29 @@ def load_dataset():
     return Dataset.from_list(data)
 
 
+class TokenCounterCallback(TrainerCallback):
+
+    def __init__(self, tracker):
+        self.tracker = tracker
+
+
+    def on_step_end(self, args, state, control, **kwargs):
+
+        inputs = kwargs.get("inputs")
+
+        if inputs and "input_ids" in inputs:
+
+            tokens = inputs["input_ids"].numel()
+
+            self.tracker.add_tokens(tokens)
+
+
 def main():
 
     config = load_config()
 
     wandb.init(
-        project="vlm-finetuning-research",
+        project=config["project"],
         name="unsloth-training",
         config=config
     )
@@ -41,33 +64,34 @@ def main():
 
     model_name = config["model"]["name"]
 
-    model, tokenizer = FastLanguageModel.from_pretrained(
-        model_name=model_name,
-        max_seq_length=config["model"]["max_seq_length"],
-        load_in_4bit=True
+    processor = AutoProcessor.from_pretrained(model_name)
+
+    model = LlavaForConditionalGeneration.from_pretrained(
+        model_name,
+        device_map="auto"
     )
 
-    model = FastLanguageModel.get_peft_model(
-        model,
-        r=config["lora"]["r"],
-        target_modules=config["lora"]["target_modules"],
-        lora_alpha=config["lora"]["lora_alpha"],
-        lora_dropout=config["lora"]["lora_dropout"]
-    )
+    collator = VisionLanguageCollator(processor)
 
-    collator = VisionLanguageCollator(model_name)
-
-    trainer = FastLanguageModel.get_trainer(
-        model=model,
-        train_dataset=dataset,
-        data_collator=collator,
+    training_args = TrainingArguments(
+        output_dir="models/unsloth",
         per_device_train_batch_size=config["training"]["batch_size"],
-        gradient_accumulation_steps=config["training"]["gradient_accumulation_steps"],
-        learning_rate=config["training"]["learning_rate"],
-        num_train_epochs=config["training"]["epochs"]
+        num_train_epochs=config["training"]["epochs"],
+        logging_steps=5,
+        save_strategy="epoch",
+        report_to="wandb"
+    )
+
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        train_dataset=dataset,
+        data_collator=collator
     )
 
     tracker = BenchmarkTracker()
+
+    trainer.add_callback(TokenCounterCallback(tracker))
 
     tracker.start()
 
@@ -75,14 +99,18 @@ def main():
 
     tracker.stop()
 
-    benchmark_results = tracker.results()
+    results = tracker.results()
 
     save_results(
-        benchmark_results,
+        results,
         "models/unsloth/benchmark.json"
     )
 
-    model.save_pretrained(config["training"]["output_dir"])
+    wandb.log(results)
+
+    model.save_pretrained("models/unsloth")
+
+    print("Unsloth training complete")
 
 
 if __name__ == "__main__":

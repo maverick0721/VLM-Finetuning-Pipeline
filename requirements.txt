@@ -17,3 +17,5 @@ scikit-learn
 evaluate
 gradio
 matplotlib
+graphviz
+pypandoc

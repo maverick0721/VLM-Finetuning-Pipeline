@@ -1,38 +1,32 @@
-import torch
+import argparse
 from PIL import Image
-from transformers import AutoProcessor, AutoModelForCausalLM
-
-
-MODEL_PATH = "models/qlora"
+from transformers import LlavaForConditionalGeneration, AutoProcessor
 
 
 def main():
 
-    processor = AutoProcessor.from_pretrained(MODEL_PATH)
+    parser = argparse.ArgumentParser()
 
-    model = AutoModelForCausalLM.from_pretrained(
-        MODEL_PATH,
-        device_map="auto"
-    )
+    parser.add_argument("--model")
+    parser.add_argument("--image")
 
-    image = Image.open("test.jpg").convert("RGB")
+    args = parser.parse_args()
 
-    prompt = "Describe the image."
+    processor = AutoProcessor.from_pretrained(args.model)
+
+    model = LlavaForConditionalGeneration.from_pretrained(args.model)
+
+    image = Image.open(args.image)
 
     inputs = processor(
         images=image,
-        text=prompt,
+        text="Describe the image",
         return_tensors="pt"
-    ).to(model.device)
-
-    output = model.generate(
-        **inputs,
-        max_new_tokens=100
     )
 
-    result = processor.decode(output[0], skip_special_tokens=True)
+    output = model.generate(**inputs)
 
-    print(result)
+    print(processor.decode(output[0]))
 
 
 if __name__ == "__main__":

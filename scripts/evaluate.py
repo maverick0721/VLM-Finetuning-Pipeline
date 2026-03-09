@@ -1,62 +1,60 @@
-# scripts/evaluate.py
+import argparse
+from PIL import Image
 
-import json
-import torch
-
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from datasets import Dataset
-from tqdm import tqdm
-
-from utils.metrics import compute_metrics
-
-
-MODEL_PATH = "models/qlora"
-DATA_PATH = "data/processed/val.json"
-
-
-def load_dataset():
-
-    with open(DATA_PATH) as f:
-        data = json.load(f)
-
-    return Dataset.from_list(data[:200])
+from transformers import (
+    LlavaForConditionalGeneration,
+    AutoProcessor
+)
 
 
 def main():
 
-    dataset = load_dataset()
+    parser = argparse.ArgumentParser()
 
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
+    parser.add_argument(
+        "--model",
+        required=True,
+        help="Path to trained model"
+    )
 
-    model = AutoModelForCausalLM.from_pretrained(
-        MODEL_PATH,
+    parser.add_argument(
+        "--image",
+        default="data/raw/images/0.jpg"
+    )
+
+    args = parser.parse_args()
+
+    print("Loading model...")
+
+    processor = AutoProcessor.from_pretrained(args.model)
+
+    model = LlavaForConditionalGeneration.from_pretrained(
+        args.model,
         device_map="auto"
     )
 
-    predictions = []
-    references = []
+    image = Image.open(args.image).convert("RGB")
 
-    for sample in tqdm(dataset):
+    prompt = "Describe the image."
 
-        prompt = sample["conversation"][0]["value"]
-        answer = sample["conversation"][1]["value"]
+    inputs = processor(
+        images=image,
+        text=prompt,
+        return_tensors="pt"
+    ).to(model.device)
 
-        inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+    output = model.generate(
+        **inputs,
+        max_new_tokens=50
+    )
 
-        outputs = model.generate(
-            **inputs,
-            max_new_tokens=100
-        )
+    result = processor.decode(
+        output[0],
+        skip_special_tokens=True
+    )
 
-        pred = tokenizer.decode(outputs[0], skip_special_tokens=True)
-
-        predictions.append(pred)
-        references.append(answer)
-
-    metrics = compute_metrics(predictions, references)
-
-    print("\nEvaluation Results")
-    print(metrics)
+    print("\nModel output:\n")
+    print(result)
 
 
 if __name__ == "__main__":
