@@ -26,5 +26,4 @@ unsloth_compiled_cache/
 .env
 data/
 models/
-reports/
 wandb/
