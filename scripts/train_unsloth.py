@@ -19,7 +19,6 @@ def load_config():
 
 
 def load_dataset():
-
     with open(DATA_PATH) as f:
         data = json.load(f)
 
@@ -30,7 +29,11 @@ def main():
 
     config = load_config()
 
-    wandb.init(project="vlm-unsloth-training")
+    wandb.init(
+        project="vlm-finetuning-research",
+        name="unsloth-training",
+        config=config
+    )
 
     dataset = load_dataset()
 

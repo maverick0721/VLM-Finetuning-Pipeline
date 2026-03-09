@@ -27,7 +27,6 @@ def load_config():
 
 
 def load_dataset():
-
     with open(DATA_PATH) as f:
         data = json.load(f)
 
@@ -38,17 +37,21 @@ def main():
 
     config = load_config()
 
-    wandb.init(project="vlm-qlora-training")
+    wandb.init(
+        project="vlm-finetuning-research",
+        name="qlora-training",
+        config=config
+    )
 
     dataset = load_dataset()
 
     model_name = config["model"]["name"]
 
     bnb_config = BitsAndBytesConfig(
-        load_in_4bit=True,
+        load_in_4bit=config["quantization"]["load_in_4bit"],
         bnb_4bit_compute_dtype=torch.float16,
-        bnb_4bit_use_double_quant=True,
-        bnb_4bit_quant_type="nf4"
+        bnb_4bit_use_double_quant=config["quantization"]["bnb_4bit_use_double_quant"],
+        bnb_4bit_quant_type=config["quantization"]["bnb_4bit_quant_type"]
     )
 
     tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -72,7 +75,7 @@ def main():
 
     collator = VisionLanguageCollator(model_name)
 
-    args = TrainingArguments(
+    training_args = TrainingArguments(
         output_dir=config["training"]["output_dir"],
         per_device_train_batch_size=config["training"]["batch_size"],
         gradient_accumulation_steps=config["training"]["gradient_accumulation_steps"],
@@ -86,7 +89,7 @@ def main():
 
     trainer = Trainer(
         model=model,
-        args=args,
+        args=training_args,
         train_dataset=dataset,
         data_collator=collator
     )
