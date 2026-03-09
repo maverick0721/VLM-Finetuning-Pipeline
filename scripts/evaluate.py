@@ -11,7 +11,7 @@ from utils.metrics import compute_metrics
 
 
 MODEL_PATH = "models/qlora"
-DATA_PATH = "data/processed/train.json"
+DATA_PATH = "data/processed/val.json"
 
 
 def load_dataset():
