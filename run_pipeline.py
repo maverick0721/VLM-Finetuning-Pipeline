@@ -1,6 +1,14 @@
 import os
 import json
+import argparse
 from dotenv import load_dotenv
+
+
+RAW_DATA_DIR = "data/raw/images"
+PROCESSED_DATA = "data/processed/train.json"
+
+QLORA_MODEL = "models/qlora"
+UNSLOTH_MODEL = "models/unsloth"
 
 
 def run(cmd):
@@ -24,6 +32,22 @@ def load_env():
         print("WANDB key loaded")
     else:
         print("Warning: WANDB_API_KEY not found")
+
+
+def dataset_exists():
+    return os.path.exists(RAW_DATA_DIR) and len(os.listdir(RAW_DATA_DIR)) > 0
+
+
+def processed_exists():
+    return os.path.exists(PROCESSED_DATA)
+
+
+def qlora_exists():
+    return os.path.exists(QLORA_MODEL)
+
+
+def unsloth_exists():
+    return os.path.exists(UNSLOTH_MODEL)
 
 
 def compare():
@@ -54,42 +78,61 @@ def compare():
 
 def main():
 
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("--skip-demo", action="store_true")
+
+    args = parser.parse_args()
+
     load_env()
 
-   
-    # DATASETUP
-    run("python -m scripts.download_dataset")
-    run("python -m scripts.prepare_dataset")
+
+    # DATA DOWNLOAD
+    if not dataset_exists():
+        run("python -m scripts.download_dataset")
+    else:
+        print("Dataset already exists, skipping download")
 
    
-    # QLoRA
-    print("\nRunning QLoRA experiment...\n")
+    # DATA PREPARATION
+    if not processed_exists():
+        run("python -m scripts.prepare_dataset")
+    else:
+        print("Processed dataset already exists")
 
-    run("python -m scripts.train_qlora")
-    run("python -m scripts.evaluate --model models/qlora")
+   
+    # QLoRA TRAINING
+    if not qlora_exists():
+        print("\nTraining QLoRA...\n")
+        run("python -m scripts.train_qlora")
+        run("python -m scripts.evaluate --model models/qlora")
+    else:
+        print("QLoRA model already trained")
 
     
-    # Unsloth
-    print("\nRunning Unsloth experiment...\n")
+    # UNSLOTH TRAINING
+    if not unsloth_exists():
+        print("\nTraining Unsloth...\n")
+        run("python -m scripts.train_unsloth")
+        run("python -m scripts.evaluate --model models/unsloth")
+    else:
+        print("Unsloth model already trained")
 
-    run("python -m scripts.train_unsloth")
-    run("python -m scripts.evaluate --model models/unsloth")
-
-  
-    # Benchmark comparison
+    
+    # BENCHMARK COMPARISON
     compare()
 
-   
-    # Generate plots
+  
+    # REPORT GENERATION
     run("python -m scripts.generate_report")
 
-  
-    # Launch demo
-    print("\nLaunching interactive demo...\n")
-
-    run("python -m scripts.demo.py")
-
-    print("\nPipeline finished successfully\n")
+   
+    # DEMO
+    if not args.skip_demo:
+        print("\nLaunching demo...\n")
+        run("python -m scripts.demo")
+    else:
+        print("Demo skipped")
 
 
 if __name__ == "__main__":

@@ -1,25 +1,40 @@
 import os
+import requests
 from datasets import load_dataset
 from tqdm import tqdm
-from PIL import Image
+
+OUTPUT_DIR = "data/raw/images"
 
 
-OUTPUT_DIR = "data/raw/coco_images"
+def download_image(url, path):
+    try:
+        r = requests.get(url, timeout=5)
+        if r.status_code == 200:
+            with open(path, "wb") as f:
+                f.write(r.content)
+    except:
+        pass
 
 
 def main():
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    dataset = load_dataset("coco_captions", "2017", split="train")
+    print("Downloading Conceptual Captions dataset...")
+
+    dataset = load_dataset("conceptual_captions", split="train")
 
     for idx, sample in enumerate(tqdm(dataset)):
 
-        image = sample["image"]
-
+        url = sample["image_url"]
         path = os.path.join(OUTPUT_DIR, f"{idx}.jpg")
 
-        image.save(path)
+        download_image(url, path)
+
+        if idx > 5000:
+            break
+
+    print("Images saved to:", OUTPUT_DIR)
 
 
 if __name__ == "__main__":
