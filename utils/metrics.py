@@ -1,16 +1,9 @@
-from datasets import load_metric
+import evaluate
 
 
-bleu = load_metric("bleu")
+bleu = evaluate.load("bleu")
 
 
 def compute_metrics(predictions, references):
-
-    score = bleu.compute(
-        predictions=predictions,
-        references=references
-    )
-
-    return {
-        "bleu": score["bleu"]
-    }
+    score = bleu.compute(predictions=predictions, references=references)
+    return {"bleu": score["bleu"]}

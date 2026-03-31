@@ -1,76 +1,71 @@
 import json
+import os
+
+import torch
 import yaml
 import wandb
-
 from datasets import Dataset
+from peft import LoraConfig, get_peft_model
 from transformers import (
-    LlavaForConditionalGeneration,
     AutoProcessor,
+    BitsAndBytesConfig,
+    LlavaForConditionalGeneration,
     TrainingArguments,
-    Trainer,
-    TrainerCallback
 )
 
-from peft import LoraConfig, get_peft_model
-
+from scripts.benchmark import BenchmarkTracker, BenchmarkTrainer, save_results
 from utils.vision_collator import VisionLanguageCollator
-from scripts.benchmark import BenchmarkTracker, save_results
 
 
 CONFIG_PATH = "configs/experiment.yaml"
 DATA_PATH = "data/processed/train.json"
+OUTPUT_DIR = "models/qlora"
 
 
 def load_config():
-
     with open(CONFIG_PATH) as f:
         return yaml.safe_load(f)
 
 
 def load_dataset():
-
     with open(DATA_PATH) as f:
         data = json.load(f)
-
     return Dataset.from_list(data)
 
 
-class TokenCounterCallback(TrainerCallback):
+def setup_wandb(config):
+    use_wandb = bool(os.getenv("WANDB_API_KEY"))
+    if use_wandb:
+        wandb.init(project=config["project"], name="qlora-training", config=config)
+        return "wandb", True
 
-    def __init__(self, tracker):
-        self.tracker = tracker
-
-
-    def on_train_batch_end(self, args, state, control, **kwargs):
-
-        inputs = kwargs.get("inputs")
-
-        if inputs and "input_ids" in inputs:
-
-            tokens = inputs["input_ids"].numel()
-
-            self.tracker.add_tokens(tokens)
+    os.environ["WANDB_MODE"] = "disabled"
+    print("WANDB_API_KEY not set. Running training without Weights & Biases logging.")
+    return "none", False
 
 
 def main():
-
     config = load_config()
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    wandb.init(
-        project=config["project"],
-        name="qlora-training",
-        config=config
-    )
+    report_to, wandb_enabled = setup_wandb(config)
 
     dataset = load_dataset()
-
     model_name = config["model"]["name"]
 
     processor = AutoProcessor.from_pretrained(model_name)
 
+    quant_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_compute_dtype=torch.float16,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_use_double_quant=True,
+    )
+
     model = LlavaForConditionalGeneration.from_pretrained(
         model_name,
-        device_map="auto"
+        quantization_config=quant_config,
+        device_map="auto",
     )
 
     lora_config = LoraConfig(
@@ -79,52 +74,47 @@ def main():
         lora_dropout=config["lora"]["dropout"],
         target_modules=["q_proj", "v_proj"],
         bias="none",
-        task_type="CAUSAL_LM"
+        task_type="CAUSAL_LM",
     )
-
     model = get_peft_model(model, lora_config)
 
-    collator = VisionLanguageCollator(processor)
-
     training_args = TrainingArguments(
-        output_dir="models/qlora",
+        output_dir=OUTPUT_DIR,
         per_device_train_batch_size=config["training"]["batch_size"],
         num_train_epochs=config["training"]["epochs"],
+        learning_rate=float(config["training"]["learning_rate"]),
         logging_steps=5,
         save_strategy="epoch",
-        report_to="wandb",
+        report_to=report_to,
         remove_unused_columns=False,
-        dataloader_drop_last=True
-    )
-
-    trainer = Trainer(
-        model=model,
-        args=training_args,
-        train_dataset=dataset,
-        data_collator=collator
+        dataloader_drop_last=True,
+        bf16=False,
+        fp16=True,
     )
 
     tracker = BenchmarkTracker()
 
-    trainer.add_callback(TokenCounterCallback(tracker))
+    trainer = BenchmarkTrainer(
+        model=model,
+        args=training_args,
+        train_dataset=dataset,
+        data_collator=VisionLanguageCollator(processor),
+        tracker=tracker,
+    )
+
 
     tracker.start()
-
     trainer.train()
-
     tracker.stop()
 
     results = tracker.results()
+    save_results(results, f"{OUTPUT_DIR}/benchmark.json")
 
-    save_results(
-        results,
-        "models/qlora/benchmark.json"
-    )
+    if wandb_enabled:
+        wandb.log(results)
 
-    wandb.log(results)
-
-    model.save_pretrained("models/qlora")
-    processor.save_pretrained("models/qlora")
+    model.save_pretrained(OUTPUT_DIR)
+    processor.save_pretrained(OUTPUT_DIR)
 
     print("QLoRA training complete")
 

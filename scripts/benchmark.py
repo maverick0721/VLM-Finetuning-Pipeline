@@ -2,6 +2,7 @@ import time
 import json
 import os
 import torch
+from transformers import Trainer
 
 
 class BenchmarkTracker:
@@ -71,3 +72,33 @@ def save_results(results, path):
         json.dump(results, f, indent=2)
 
     print("Benchmark results saved:", path)
+
+
+def count_input_tokens(inputs):
+
+    attention_mask = inputs.get("attention_mask")
+
+    if attention_mask is not None:
+        return int(attention_mask.sum().item())
+
+    input_ids = inputs.get("input_ids")
+
+    if input_ids is not None:
+        return int(input_ids.numel())
+
+    return 0
+
+
+class BenchmarkTrainer(Trainer):
+
+    def __init__(self, *args, tracker=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.tracker = tracker
+
+
+    def training_step(self, model, inputs, num_items_in_batch=None):
+
+        if self.tracker is not None:
+            self.tracker.add_tokens(count_input_tokens(inputs))
+
+        return super().training_step(model, inputs, num_items_in_batch=num_items_in_batch)

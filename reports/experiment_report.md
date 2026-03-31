@@ -7,14 +7,14 @@
 ## Benchmark Results
 | Metric | QLoRA | Unsloth |
 |------|------|------|
-| training_time_seconds | 28.22 | 77.83 |
-| tokens_per_second | 0.0 | 0.0 |
-| peak_vram_gb | 22.8 | 4.67 |
+| peak_vram_gb | 12.41 | 4.68 |
+| tokens_per_second | 1095.73 | 337.39 |
+| training_time_seconds | 34.95 | 113.5 |
 
 ## Training Performance Charts
-![reports/training_time_seconds.png](reports/training_time_seconds.png)
-![reports/tokens_per_second.png](reports/tokens_per_second.png)
 ![reports/peak_vram_gb.png](reports/peak_vram_gb.png)
+![reports/tokens_per_second.png](reports/tokens_per_second.png)
+![reports/training_time_seconds.png](reports/training_time_seconds.png)
 
 ## Observations
-Unsloth generally provides faster training throughput while maintaining comparable performance.
+Throughput and memory trends depend on hardware and model backend details.

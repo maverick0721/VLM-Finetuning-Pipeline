@@ -156,7 +156,7 @@ scripts/
     train_qlora.py
     train_unsloth.py
     evaluate.py
-    benchmark_training.py
+    benchmark.py
     generate_report.py
     generate_diagram.py
     export_report_pdf.py
