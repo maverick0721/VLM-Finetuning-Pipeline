@@ -212,51 +212,61 @@ graphviz
 
 # Running the Full Experiment
 
-Execute the complete pipeline with one command:
+Simplest handoff command:
+
+```bash
+./start_project.sh
+```
+
+What this one command does:
+
+```
+1. Creates .venv if needed
+2. Installs Python dependencies if needed
+3. Reuses existing trained artifacts when they already exist
+4. Otherwise runs the full pipeline end to end
+5. Launches both demos
+   - QLoRA on port 7860
+   - Unsloth on port 7861
+6. Prints the report, PDF, and diagram paths for walkthroughs
+```
+
+You can also skip retraining and only relaunch the demos:
+
+```bash
+./start_project.sh --skip-pipeline
+```
+
+If you only want the pipeline without demos:
 
 ```bash
 python run_pipeline.py
-```
-
-The pipeline executes:
-
-```
-1. Dataset download
-2. Dataset preprocessing
-
-3. QLoRA training
-4. QLoRA evaluation
-
-5. Unsloth training
-6. Unsloth evaluation
-
-7. Benchmark comparison
-8. Experiment report generation
-9. Architecture diagram generation
-10. PDF report export
-11. Interactive demo launch with --launch-demo
 ```
 
 ---
 
 # Interactive Demo
 
-Launch the demo:
+The demo entrypoint now supports either model:
 
 ```bash
-python -m scripts.demo
+python -m scripts.demo --model models/qlora --port 7860 --label QLoRA
+python -m scripts.demo --model models/unsloth --port 7861 --label Unsloth
 ```
 
-Open the interface:
+When you use `./start_project.sh`, both are launched automatically.
+
+Open the interfaces:
 
 ```
 http://localhost:7860
+http://localhost:7861
 ```
 
-Example prompt:
+Best prompt for this project:
 
 ```
-Describe the image
+Describe the image.
 ```
 
 ---
