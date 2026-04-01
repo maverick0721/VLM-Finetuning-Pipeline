@@ -96,9 +96,16 @@ The experiment uses a **subset of Conceptual Captions**.
 Configuration:
 
 ```
-Dataset size: 100 images
+Requested download size: 100 images
 Task: Image Captioning
 Prompt: Describe the image
+```
+
+Current prepared dataset in this workspace:
+
+```
+Valid prepared samples: 65
+Invalid downloaded images removed: 2
 ```
 
 Dataset scripts:
@@ -107,6 +114,8 @@ Dataset scripts:
 scripts/download_dataset.py
 scripts/prepare_dataset.py
 ```
+
+The exact prepared sample count can vary depending on which image URLs are still reachable and which downloaded files pass image validation.
 
 ---
 
@@ -225,7 +234,7 @@ The pipeline executes:
 8. Experiment report generation
 9. Architecture diagram generation
 10. PDF report export
-11. Interactive demo launch
+11. Interactive demo launch with --launch-demo
 ```
 
 ---
@@ -258,113 +267,3 @@ Describe the image
 The image shows several buses parked in a large parking area.
 The buses appear to be aligned in rows, suggesting a bus terminal or depot.
 ```
-
----
-
-# Automated Experiment Reports
-
-The pipeline generates experiment artifacts automatically.
-
-```
-reports/
- ├── experiment_report.md
- ├── experiment_report.pdf
- ├── training_time_seconds.png
- ├── tokens_per_second.png
- ├── peak_vram_gb.png
- └── pipeline_diagram.png
-```
-
----
-
-# Continuous Integration
-
-Example GitHub Actions workflow:
-
-```yaml
-name: CI
-
-on:
-  push:
-    branches: [ main ]
-
-jobs:
-  pipeline-test:
-
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.10
-
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-
-      - name: Run dataset preparation
-        run: |
-          python scripts/prepare_dataset.py
-```
-
----
-
-# Reproducibility
-
-The entire experiment is reproducible.
-
-Running:
-
-```bash
-python run_pipeline.py
-```
-
-will automatically generate:
-
-```
-trained models
-benchmark metrics
-training charts
-experiment reports
-pipeline diagrams
-```
-
----
-
-# Future Work
-
-Possible improvements:
-
-- larger dataset experiments  
-- distributed multi-GPU training  
-- hyperparameter sweeps  
-- additional PEFT methods  
-- attention visualization for image grounding  
-
----
-
-# License
-
-MIT License
-
----
-
-# Author
-
-Shivang Gupta  
-Indian Institute of Technology Roorkee
-
----
-
-# Acknowledgements
-
-Libraries used:
-
-- HuggingFace Transformers  
-- PyTorch  
-- Unsloth  
-- Weights & Biases  
-- Gradio

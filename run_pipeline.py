@@ -56,26 +56,36 @@ def model_exists(path):
     return os.path.exists(path) and len(os.listdir(path)) > 0
 
 
-def compare():
-    q_file = "models/qlora/benchmark.json"
-    u_file = "models/unsloth/benchmark.json"
+def load_json(path):
+    if not os.path.exists(path):
+        return {}
+    with open(path) as f:
+        return json.load(f)
 
-    if not os.path.exists(q_file) or not os.path.exists(u_file):
-        print("Benchmark files not found. Skipping comparison.")
+
+def load_model_results(model_dir):
+    results = {}
+    results.update(load_json(os.path.join(model_dir, "benchmark.json")))
+    results.update(load_json(os.path.join(model_dir, "evaluation.json")))
+    return results
+
+
+def compare():
+    q = load_model_results(QLORA_MODEL_DIR)
+    u = load_model_results(UNSLOTH_MODEL_DIR)
+
+    if not q or not u:
+        print("Benchmark or evaluation files not found. Skipping comparison.")
         return
 
-    with open(q_file) as f:
-        q = json.load(f)
+    print("\n========== BENCHMARK ========= =\n")
 
-    with open(u_file) as f:
-        u = json.load(f)
-
-    print("\n========== BENCHMARK ==========\n")
-
-    for k in q:
-        print(k)
-        print("QLoRA  :", q[k])
-        print("Unsloth:", u.get(k))
+    for key in sorted(set(q.keys()) | set(u.keys())):
+        if isinstance(q.get(key), str) or isinstance(u.get(key), str):
+            continue
+        print(key)
+        print("QLoRA  :", q.get(key))
+        print("Unsloth:", u.get(key))
         print()
 
 
@@ -103,7 +113,7 @@ def main(launch_demo=False):
     clear_gpu()
 
     print("\nSTEP 4: QLoRA EVALUATION")
-    run([sys.executable, "-m", "scripts.evaluate", "--model", "models/qlora"])
+    run([sys.executable, "-m", "scripts.evaluate", "--model", QLORA_MODEL_DIR])
 
     clear_gpu()
 
@@ -116,7 +126,7 @@ def main(launch_demo=False):
     clear_gpu()
 
     print("\nSTEP 6: UNSLOTH EVALUATION")
-    run([sys.executable, "-m", "scripts.evaluate", "--model", "models/unsloth"])
+    run([sys.executable, "-m", "scripts.evaluate", "--model", UNSLOTH_MODEL_DIR])
 
     clear_gpu()
 
