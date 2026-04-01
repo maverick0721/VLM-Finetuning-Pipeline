@@ -1,0 +1,21 @@
+digraph CoreModel {
+  rankdir=LR;
+  graph [fontname="Helvetica", bgcolor="white", splines=true, nodesep=0.4, ranksep=0.7];
+  node [shape=box, style="rounded,filled", color="#1f2937", fillcolor="#f8fafc", fontname="Helvetica", fontsize=11];
+  edge [color="#4b5563", arrowsize=0.7, penwidth=1.2];
+
+  image [label="Input Image"];
+  vision [label="Vision Encoder\nCLIP", fillcolor="#e0f2fe"];
+  prompt [label="Prompt Text"];
+  llm [label="Language Model\nLLaVA-style Backbone", fillcolor="#fef3c7"];
+  fusion [label="Multimodal Fusion", fillcolor="#ede9fe"];
+  lora [label="LoRA Adapters", fillcolor="#dcfce7"];
+  caption [label="Caption Generation", fillcolor="#fee2e2"];
+
+  image -> vision;
+  prompt -> llm;
+  vision -> fusion;
+  llm -> fusion;
+  fusion -> lora;
+  lora -> caption;
+}

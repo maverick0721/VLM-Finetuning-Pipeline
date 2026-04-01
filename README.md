@@ -1,208 +1,161 @@
-# Vision-Language Model Fine-Tuning Benchmark  
-### QLoRA vs Unsloth for Multimodal Training
+# VLM Finetuning Pipeline
 
-![Python](https://img.shields.io/badge/python-3.10+-blue)
-![PyTorch](https://img.shields.io/badge/pytorch-2.x-orange)
-![Transformers](https://img.shields.io/badge/huggingface-transformers-yellow)
-![License](https://img.shields.io/badge/license-MIT-green)
-![Experiment Tracking](https://img.shields.io/badge/tracking-wandb-purple)
+<p align="center">
+  <strong>Benchmarking QLoRA vs Unsloth for multimodal fine-tuning with an end-to-end, demo-ready workflow.</strong>
+</p>
 
----
-
-# Vision-Language Model Fine-Tuning Benchmark
-
-This repository implements a **reproducible research pipeline** for benchmarking parameter-efficient fine-tuning methods for **Vision-Language Models (VLMs)**.
-
-The project compares two modern training techniques:
-
-| Method | Description |
-|------|------|
-| **QLoRA** | Quantized Low-Rank Adaptation using HuggingFace PEFT |
-| **Unsloth** | High-performance LoRA training framework optimized for faster training |
-
-The pipeline performs the entire experiment automatically:
-
-- dataset preparation  
-- multimodal fine-tuning  
-- model evaluation  
-- benchmark measurement  
-- automatic report generation  
-- architecture diagram generation  
-- interactive demo deployment  
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/PyTorch-2.x-EE4C2C?logo=pytorch&logoColor=white" alt="PyTorch">
+  <img src="https://img.shields.io/badge/Transformers-Hugging%20Face-FFD21E?logo=huggingface&logoColor=black" alt="Transformers">
+  <img src="https://img.shields.io/badge/PEFT-LoRA-7B61FF" alt="PEFT">
+  <img src="https://img.shields.io/badge/Gradio-Demo-F97316?logo=gradio&logoColor=white" alt="Gradio">
+  <img src="https://img.shields.io/badge/License-MIT-22C55E" alt="License">
+</p>
 
 ---
 
-# System Architecture
+## Problem
 
-![Pipeline Architecture](reports/pipeline_diagram.png)
+Fine-tuning vision-language models is usually hard to compare fairly.
 
-Training workflow:
+Most projects stop at training code, but a strong benchmark needs more than that:
 
-```
-Dataset
-   ↓
-Download Script
-   ↓
-Dataset Preprocessing
-   ↓
-Training
- ├─ QLoRA
- └─ Unsloth
-   ↓
-Evaluation
-   ↓
-Benchmark Metrics
-   ↓
-Experiment Report
-   ↓
-Interactive Demo
-```
+- validated multimodal data
+- repeatable training runs
+- apples-to-apples evaluation
+- readable benchmark outputs
+- a demo that non-technical people can try
+
+This repo exists to turn that into one clean workflow for comparing **QLoRA** and **Unsloth** on the same captioning task.
 
 ---
 
-# Benchmark Leaderboard
+## Solution
 
-Results are generated automatically from training runs.
+This repository packages a full **vision-language model fine-tuning benchmark** into a workflow that is easy to run, explain, and demo.
 
-| Method | Training Time ↓ | Tokens / Second ↑ | Peak GPU VRAM ↓ |
-|------|------|------|------|
-| **QLoRA** | from benchmark.json | from benchmark.json | from benchmark.json |
-| **Unsloth** | from benchmark.json | from benchmark.json | from benchmark.json |
+It compares two parameter-efficient multimodal training strategies:
 
----
+| Method | Focus |
+| --- | --- |
+| **QLoRA** | Faster fine-tuning throughput with Hugging Face PEFT + quantization |
+| **Unsloth** | Lower-memory multimodal LoRA workflow with an optimized loading/training path |
 
-# Training Metrics
+The pipeline covers the full lifecycle:
 
-The pipeline generates benchmark visualizations automatically.
+- dataset download and validation
+- dataset preparation for captioning
+- QLoRA training and evaluation
+- Unsloth training and evaluation
+- benchmark comparison and charts
+- markdown + PDF report generation
+- interactive Gradio demos for both models
 
-## Training Time
+Current workspace facts:
 
-![Training Time](reports/training_time_seconds.png)
-
-## Training Throughput
-
-![Tokens Per Second](reports/tokens_per_second.png)
-
-## GPU Memory Usage
-
-![Peak VRAM](reports/peak_vram_gb.png)
-
----
-
-# Dataset
-
-The experiment uses a **subset of Conceptual Captions**.
-
-Configuration:
-
-```
-Requested download size: 100 images
-Task: Image Captioning
-Prompt: Describe the image
-```
-
-Current prepared dataset in this workspace:
-
-```
-Valid prepared samples: 65
-Invalid downloaded images removed: 2
-```
-
-Dataset scripts:
-
-```
-scripts/download_dataset.py
-scripts/prepare_dataset.py
-```
-
-The exact prepared sample count can vary depending on which image URLs are still reachable and which downloaded files pass image validation.
+- Requested download target: `100` images
+- Current valid prepared samples: `65`
+- Task prompt used in training: `Describe the image.`
+- Corrupt downloads are filtered during download and again during dataset preparation
 
 ---
 
-# Model Architecture
+## Architecture
 
-The multimodal architecture is inspired by **LLaVA-style models**.
+![Pipeline Diagram](reports/pipeline_diagram.png)
 
-Components:
+Core model idea:
 
-```
-Vision Encoder → CLIP
-Language Model → LLaMA
-Adapter Method → LoRA
-```
+![Core Model Diagram](reports/core_model_diagram.png)
 
-The model learns to generate text conditioned on image input.
+Repository layout:
 
----
-
-# Repository Structure
-
-```
+```text
 VLM-Finetuning-Pipeline/
-
-configs/
-    experiment.yaml
-
-data/
-    raw/
-    processed/
-
-models/
-    qlora/
-    unsloth/
-
-reports/
-    experiment_report.md
-    experiment_report.pdf
-    training_time_seconds.png
-    tokens_per_second.png
-    peak_vram_gb.png
-    pipeline_diagram.png
-
-scripts/
-    download_dataset.py
-    prepare_dataset.py
-    train_qlora.py
-    train_unsloth.py
-    evaluate.py
-    benchmark.py
-    generate_report.py
-    generate_diagram.py
-    export_report_pdf.py
-    demo.py
-
-utils/
-    vision_collator.py
-    metrics.py
-
-run_pipeline.py
-requirements.txt
-Dockerfile
-docker-compose.yml
-.dockerignore
-README.md
+├── configs/
+│   └── experiment.yaml
+├── data/
+│   ├── raw/
+│   └── processed/
+├── models/
+│   ├── qlora/
+│   └── unsloth/
+├── reports/
+├── scripts/
+│   ├── download_dataset.py
+│   ├── prepare_dataset.py
+│   ├── train_qlora.py
+│   ├── train_unsloth.py
+│   ├── evaluate.py
+│   ├── benchmark.py
+│   ├── generate_report.py
+│   ├── generate_diagram.py
+│   ├── export_report_pdf.py
+│   └── demo.py
+├── utils/
+│   ├── metrics.py
+│   └── vision_collator.py
+├── run_pipeline.py
+├── showcase.py
+└── start_project.sh
 ```
 
 ---
 
-# Installation
+## Demo Command
 
-Create a virtual environment:
+If you want to show this project to someone, use this:
+
+```bash
+cd /home/ubuntu/VLM-Finetuning-Pipeline
+./start_project.sh
+```
+
+That single command will:
+
+1. create `.venv` if needed
+2. install Python dependencies if needed
+3. reuse existing artifacts when available
+4. otherwise run the full pipeline end to end
+5. launch both demos
+6. print the report, PDF, and diagram paths
+
+Fast relaunch without rerunning the pipeline:
+
+```bash
+./start_project.sh --skip-pipeline
+```
+
+Demo URLs when launched:
+
+- QLoRA demo: `http://127.0.0.1:7860`
+- Unsloth demo: `http://127.0.0.1:7861`
+
+Direct launch examples:
+
+```bash
+python -m scripts.demo --model models/qlora --port 7860 --label QLoRA
+python -m scripts.demo --model models/unsloth --port 7861 --label Unsloth
+```
+
+Best prompt for this project:
+
+```text
+Describe the image.
+```
+
+Installation if you want to set it up manually:
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-```
-
-Install dependencies:
-
-```bash
 pip install -r requirements.txt
 ```
 
-Optional system dependencies:
+Optional system tools used by report export and diagrams:
 
-```
+```text
 pandoc
 wkhtmltopdf
 graphviz
@@ -210,70 +163,79 @@ graphviz
 
 ---
 
-# Running the Full Experiment
+## Results
 
-Simplest handoff command:
+Latest verified artifacts in this workspace were generated on a cleaned dataset of **65 samples**.
 
-```bash
-./start_project.sh
-```
+| Metric | QLoRA | Unsloth |
+| --- | ---: | ---: |
+| Training time (s) | 30.74 | 84.59 |
+| Tokens / second | 1245.66 | 452.72 |
+| Peak VRAM (GB) | 12.41 | 4.68 |
+| BLEU | 0.0059 | 0.0082 |
+| ROUGE-1 | 0.1152 | 0.1186 |
+| ROUGE-L | 0.0963 | 0.1024 |
+| Avg generation time (s) | 2.2602 | 3.7867 |
+| Samples evaluated | 65 | 65 |
 
-What this one command does:
+Quick read:
 
-```
-1. Creates .venv if needed
-2. Installs Python dependencies if needed
-3. Reuses existing trained artifacts when they already exist
-4. Otherwise runs the full pipeline end to end
-5. Launches both demos
-   - QLoRA on port 7860
-   - Unsloth on port 7861
-6. Prints the report, PDF, and diagram paths for walkthroughs
-```
+- **QLoRA** is faster in this run.
+- **Unsloth** uses less VRAM.
+- Caption quality is close, with Unsloth slightly ahead on the current aggregate metrics.
 
-You can also skip retraining and only relaunch the demos:
+### Training Time
 
-```bash
-./start_project.sh --skip-pipeline
-```
+![Training Time](reports/training_time_seconds.png)
 
-If you only want the pipeline without demos:
+### Throughput
+
+![Tokens Per Second](reports/tokens_per_second.png)
+
+### Peak VRAM
+
+![Peak VRAM](reports/peak_vram_gb.png)
+
+### Caption Quality
+
+![BLEU](reports/bleu.png)
+
+![ROUGE-1](reports/rouge1.png)
+
+![ROUGE-L](reports/rougeL.png)
+
+Generated outputs live in [`reports/`](reports):
+
+- `reports/experiment_report.md`
+- `reports/experiment_report.pdf`
+- `reports/pipeline_diagram.png`
+- benchmark chart PNGs for speed, memory, and caption quality
+
+Useful manual commands:
 
 ```bash
 python run_pipeline.py
+python showcase.py --skip-pipeline
+python -m scripts.evaluate --model models/qlora
+python -m scripts.evaluate --model models/unsloth
 ```
 
 ---
 
-# Interactive Demo
+## Why This Matters
 
-The demo entrypoint now supports either model:
+This repo is designed to be more than a training script dump.
 
-```bash
-python -m scripts.demo --model models/qlora --port 7860 --label QLoRA
-python -m scripts.demo --model models/unsloth --port 7861 --label Unsloth
-```
+It shows the ability to:
 
-When you use `./start_project.sh`, both are launched automatically.
-
-Open the interfaces:
-
-```
-http://localhost:7860
-http://localhost:7861
-```
-
-Best prompt for this project:
-
-```
-Describe the image.
-```
+- build a reproducible multimodal PEFT benchmark
+- compare QLoRA vs Unsloth side by side with real metrics
+- turn raw experiment outputs into charts and reports
+- ship a demo-ready project that another person can run with one command
+- connect research-style evaluation with a practical product-style walkthrough
 
 ---
 
-# Example Model Output
+## License
 
-```
-The image shows several buses parked in a large parking area.
-The buses appear to be aligned in rows, suggesting a bus terminal or depot.
-```
+MIT
